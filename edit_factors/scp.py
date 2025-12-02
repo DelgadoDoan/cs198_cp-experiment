@@ -30,7 +30,7 @@ for cp_pair in scp_pairs:
     for edit_factor in edit_factors:
         cp = make_ideal_cp(cp_pair)
         edited_cc = edit_cc(cp, cp_pair, edit_factor)
-        eigvals_cc, _ = np.linalg.eig(edited_cc)
+        eigvals_cc, eigvecs_cc = np.linalg.eig(edited_cc)
         axes[0].scatter(
             [edit_factor]*len(eigvals_cc),
             np.real(eigvals_cc),
@@ -54,7 +54,7 @@ for cp_pair in scp_pairs:
     for edit_factor in edit_factors:
         cp = make_ideal_cp(cp_pair)
         edited_pp = edit_pp(cp, cp_pair, edit_factor)
-        eigvals_pp, _ = np.linalg.eig(edited_pp)
+        eigvals_pp, eigvecs_pp = np.linalg.eig(edited_pp)
         axes[1].scatter(
             [edit_factor]*len(eigvals_pp),
             np.real(eigvals_pp),
@@ -77,7 +77,7 @@ for cp_pair in scp_pairs:
     for edit_factor in edit_factors:
         cp = make_ideal_cp(cp_pair)
         edited_cp = edit_cp(cp, edit_factor)
-        eigvals_cp, _ = np.linalg.eig(edited_cp)
+        eigvals_cp, eigvecs_cp = np.linalg.eig(edited_cp)
         axes[2].scatter(
             [edit_factor]*len(eigvals_cp),
             np.real(eigvals_cp),
@@ -257,6 +257,54 @@ for cp_pair in scp_pairs:
     # Save the bar chart
     bar_path = os.path.join(counts_dir, f"{cp_pair}.png")
     plt.savefig(bar_path, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+    # --- Eigenvector plots (Principal + 2nd Smallest) ---
+    fig_u, axes_u = plt.subplots(1, 3, figsize=(18, 5), sharey=True)
+
+    datasets = [
+        ("CC", eigvals_cc, eigvecs_cc, "red"),
+        ("PP", eigvals_pp, eigvecs_pp, "blue"),
+        ("CP", eigvals_cp, eigvecs_cp, "green")
+    ]
+
+    for ax, (label, eigvals, eigvecs, color) in zip(axes_u, datasets):
+
+        # Sort eigenvalues and get indices
+        idx_sorted = np.argsort(eigvals)
+
+        smallest_idx = idx_sorted[0]
+        second_smallest_idx = idx_sorted[1]
+        principal_idx = idx_sorted[-1]
+
+        x = np.arange(eigvecs.shape[0])
+
+        # Plot only two eigenvectors
+        ax.plot(
+            x, np.real(eigvecs[:, principal_idx]),
+            color=color, linewidth=1.2, label="Principal Eigenvector"
+        )
+
+        ax.plot(
+            x, np.real(eigvecs[:, second_smallest_idx]),
+            color=color, linestyle="--", linewidth=1.2,
+            label="2nd Smallest Eigenvector"
+        )
+
+        ax.set_title(f"{label} (edit={edit_factor})")
+        ax.set_xlabel("Node Index")
+        ax.grid(True, linestyle=":")
+        ax.legend(fontsize=8)
+
+    axes_u[0].set_ylabel("Eigenvector Component")
+    plt.tight_layout()
+    
+    # Save plot
+    save_dir = "edit_factors/scp/plots/eigenvectors"
+    os.makedirs(save_dir, exist_ok=True)
+
+    save_path = os.path.join(save_dir, f"{cp_pair}.png")
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close(fig)
 
     print(f"{cp_pair} done")
